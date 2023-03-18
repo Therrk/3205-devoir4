@@ -56,7 +56,6 @@ float isnr;
 //------------------------------------------------
 //------------------------------------------------
 
-
 //---------------------------------------------------------
 //---------------------------------------------------------
 // PROGRAMME PRINCIPAL   ----------------------------------                     
@@ -79,27 +78,30 @@ int main(int argc,char **argv)
   float** mat_psf=fmatrix_allocate_2d(length,width);
 
   float** mat_I=fmatrix_allocate_2d(length,width);
-  float** mat_mod=fmatrix_allocate_2d(length,width);
+  float** mat_prec_mod=fmatrix_allocate_2d(length,width);
   float** mat_h_R=fmatrix_allocate_2d(length,width);
   float** mat_h_I=fmatrix_allocate_2d(length,width);
   float** mat_rest_I=fmatrix_allocate_2d(length,width);
   float** mat_h_conj_R=fmatrix_allocate_2d(length,width);
   float** mat_h_conj_I=fmatrix_allocate_2d(length,width);
   float** mat_h_mod=fmatrix_allocate_2d(length,width);
-  float** mat_tmp10=fmatrix_allocate_2d(length,width);
-  float** mat_tmp11=fmatrix_allocate_2d(length,width);
-  float** mat_tmp12=fmatrix_allocate_2d(length,width);
+  float** mat_rest_best_I=fmatrix_allocate_2d(length,width);
+  float** mat_rest_prec_I=fmatrix_allocate_2d(length,width);
+  float** mat_h_conj_divided=fmatrix_allocate_2d(length,width);
+  float** mat_h_conj_I_divided=fmatrix_allocate_2d(length,width);
 
     // zeros
   fmatrix_zero(length, width, mat_h_R);
   fmatrix_zero(length, width, mat_h_I);
   fmatrix_zero(length, width, mat_I);
-  fmatrix_zero(length, width, mat_mod);
+  fmatrix_zero(length, width, mat_prec_mod);
   fmatrix_zero(length, width, mat_rest);
   fmatrix_zero(length, width, mat_rest_I);
   fmatrix_zero(length, width, mat_h_conj_R);
   fmatrix_zero(length, width, mat_h_conj_I);
   fmatrix_zero(length, width, mat_h_mod);
+  fmatrix_zero(length, width, mat_rest_best_I);
+  fmatrix_zero(length, width, mat_rest_prec_I);
  
   //=========================================================
   //== PROG =================================================
@@ -144,7 +146,6 @@ int main(int argc,char **argv)
   }
 
   FFTDD(mat_h_R, mat_h_I, length, width);
-  FFTDD(mat, mat_I, length, width);
 
   // H conjugué
   for (i = 0; i < length; i++) {
@@ -154,41 +155,65 @@ int main(int argc,char **argv)
     }
   }
   
-  // modules au carré
+  // module au carré de H
   fmatrix_module(length, width, mat_h_R, mat_h_I, mat_h_mod);
-  fmatrix_module(length, width, mat, mat_I, mat_mod);
   for (i = 0; i < length; i++) {
     	for (j = 0; j < width; j++) {
   	    mat_h_mod[i][j]= CARRE(mat_h_mod[i][j]);
-  	    mat_mod[i][j]= CARRE(mat_mod[i][j]);
       }
   }
-  // restauration
-  for (i = 0; i < length; i++) {
-  	for (j = 0; j < width; j++) {
-	    denum = mat_h_mod[i][j]+(variance_noise/(length*width))/mat_mod[i][j];
-      mat_h_conj_R[i][j] = mat_h_conj_R[i][j]/denum;
-      mat_h_conj_I[i][j] = mat_h_conj_I[i][j]/denum;
-    }
-  }
-  MultMatrix(mat_rest, mat_rest_I, mat, mat_I, mat_h_conj_R, mat_h_conj_I, length, width);
   
-  IFFTDD(mat_rest, mat_rest_I, length, width);
-  Recal(mat_rest, length, width);
+  // setup matrice précédente initiale
+  FFTDD(mat, mat_I, length, width);
+
+  fmatrix_move(length, width, mat, mat_rest_prec);
+  fmatrix_move(length, width, mat_I, mat_rest_prec_I);
+
+  for (k = 0; k < 1000; k++) {
+    // calcul module au carré
+    fmatrix_module(length, width, mat_rest_prec, mat_rest_prec_I, mat_prec_mod);
+    for (i = 0; i < length; i++) {
+    	for (j = 0; j < width; j++) {
+        mat_prec_mod[i][j]= CARRE(mat_prec_mod[i][j]);
+      }
+    }
+	  // restauration
+    for (i = 0; i < length; i++) {
+    	for (j = 0; j < width; j++) {
+  	    denum = mat_h_mod[i][j]+(variance_noise/(length*width))/mat_prec_mod[i][j];
+        mat_h_conj_divided[i][j] = mat_h_conj_R[i][j]/denum;
+        mat_h_conj_I_divided[i][j] = mat_h_conj_I[i][j]/denum;
+      }
+    }
+    MultMatrix(mat_rest_best, mat_rest_best_I, mat, mat_I, mat_h_conj_divided, mat_h_conj_I_divided, length, width);
+    // preparation prochaine iteration
+    fmatrix_move(length, width, mat_rest_best, mat_rest_prec);
+    fmatrix_move(length, width, mat_rest_best_I, mat_rest_prec_I);
+    // cleanup image
+    IFFTDD(mat_rest_prec, mat_rest_prec_I, length, width);
+    IFFTDD(mat, mat_I, length, width);
+    Recal2(mat_rest_prec, length, width);
+    fmatrix_zero(length, width, mat_rest_prec_I);
+      // Calcul isnr
+      num = 0;
+      denum = 0;
+      for (i = 0; i < length; i++) {
+    	  for (j = 0; j < width; j++) {
+    	    num+=CARRE(mat_img[i][j]-mat[i][j]);
+    	    denum+=CARRE(mat_img[i][j]-mat_rest_prec[i][j]);
+        }
+      }
+      isnr = 10*log10(num/denum);
+      printf("isnr: %f\n",isnr);
+    FFTDD(mat_rest_prec, mat_rest_prec_I, length, width);
+    FFTDD(mat, mat_I, length, width);
+  }
+  // retour au domaine spatial!
   IFFTDD(mat, mat_I, length, width);
+  IFFTDD(mat_rest_best, mat_rest_best_I, length, width);
+  Recal2(mat_rest_best, length, width);
 
   // wow, ça marche!
-  // Calcul isnr
-  num = 0;
-  denum = 0;
-  for (i = 0; i < length; i++) {
-	  for (j = 0; j < width; j++) {
-	    num+=CARRE(mat_img[i][j]-mat[i][j]);
-	    denum+=CARRE(mat_img[i][j]-mat_rest[i][j]);
-    }
-  }
-  isnr = 10*log10(num/denum);
-  printf("isnr: %f\n",isnr);
   //---------------------------------------------
   // SAUVEGARDE et VISU
   // -------------------
@@ -196,7 +221,7 @@ int main(int argc,char **argv)
   // L'image d�grad�e              > mat
   // L'image non d�grad�e          > mat_img
   //----------------------------------------------
-  SaveImagePgm(NAME_IMG_OUT1,mat_rest,length,width);
+  SaveImagePgm(NAME_IMG_OUT1,mat_rest_best,length,width);
   SaveImagePgm(NAME_IMG_OUT2,mat,length,width);
   
   strcpy(BufSystVisuImg,NAME_VISUALISER);

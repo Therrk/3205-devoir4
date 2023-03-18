@@ -125,7 +125,7 @@ void fmatrix_module(int length, int width, float ** r, float ** im, float ** dst
             float real = r[i][j];
             float ima = im[i][j];
             if (isnan(real) || isnan(ima)) {
-                printf("erreur dans module\n");
+                // printf("erreur dans module\n");
             }
             dst[i][j] = sqrtf(real * real + ima * ima);
         }
@@ -225,4 +225,18 @@ void Recal(float** mat,int lgth,int wdth)
  /*Recalibre la matrice*/
  for(i=0;i<lgth;i++) for(j=0;j<wdth;j++)
    mat[i][j]*=(GREY_LEVEL/max);      
+}
+
+// Recal l'image coupant les valeurs trop hauts et trop basses, en les remplaçant par 0 ou 255 
+void Recal2(float** mat, int length, int width){
+    int i,j;
+    for (i = 0; i < length; i++) {
+    	for (j = 0; j < width; j++) {
+	        if (mat[i][j]<0) {
+	            mat[i][j]=0;
+            } else if (mat[i][j]>255) {
+	            mat[i][j]=255;
+            }
+        }
+    }
 }
