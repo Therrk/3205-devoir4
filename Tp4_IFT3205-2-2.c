@@ -67,7 +67,7 @@ int main(int argc,char **argv)
   int i,j,k;
   char BufSystVisuImg[100];
   float total = 0;
-  float denum;
+  float denum, num, isnr;
 
   float** mat_img=LoadImagePgm(NAME_IMG_IN,&length,&width);
   
@@ -177,6 +177,18 @@ int main(int argc,char **argv)
   Recal(mat_rest, length, width);
   IFFTDD(mat, mat_I, length, width);
 
+  // wow, ça marche!
+  // Calcul isnr
+  num = 0;
+  denum = 0;
+  for (i = 0; i < length; i++) {
+	  for (j = 0; j < width; j++) {
+	    num+=CARRE(mat_img[i][j]-mat[i][j]);
+	    denum+=CARRE(mat_img[i][j]-mat_rest[i][j]);
+    }
+  }
+  isnr = 10*log10(num/denum);
+  printf("isnr: %f\n",isnr);
   //---------------------------------------------
   // SAUVEGARDE et VISU
   // -------------------
