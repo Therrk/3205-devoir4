@@ -1,6 +1,6 @@
 //------------------------------------------------------
 // Prog    : Tp4_IFT3205                          
-// Auteur  :                                            
+// Auteur  : Ã‰lie Leblanc, Justin Veilleux
 // Date    :                                  
 // version :                                             
 // langage : C                                          
@@ -120,13 +120,13 @@ int main(int argc,char **argv)
   //--------------------------------------------------------
   //>Degradation
   //--------------------------------------------------------
-  // Cette fonction ajoute un flou créé par une psf uniforme 
+  // Cette fonction ajoute un flou crï¿½ï¿½ par une psf uniforme 
   // (fonction porte) de taille sizexsize puis ajoute sur
   // cette image rendue floue, un bruit Gaussien de variance
   // variance_noise
   //
-  // Entrée : mat_img :: image non dégradée
-  // Sortie : mat     :: image dégradée
+  // Entrï¿½e : mat_img :: image non dï¿½gradï¿½e
+  // Sortie : mat     :: image dï¿½gradï¿½e
   //--------------------------------------------------------
   degradation(mat_img,mat,length,width,psf,size,variance_noise);
 
@@ -142,8 +142,8 @@ int main(int argc,char **argv)
   // SAUVEGARDE et VISU
   // -------------------
   // Le resultat de la restoration > mat_rest
-  // L'image dégradée              > mat
-  // L'image non dégradée          > mat_img
+  // L'image dï¿½gradï¿½e              > mat
+  // L'image non dï¿½gradï¿½e          > mat_img
   //----------------------------------------------
   SaveImagePgm(NAME_IMG_OUT1,mat_rest,length,width);
   SaveImagePgm(NAME_IMG_OUT2,mat,length,width);
